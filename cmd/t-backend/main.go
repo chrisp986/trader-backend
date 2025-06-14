@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,11 +17,12 @@ import (
 )
 
 // HealthResponse represents the health check response structure
-type HealthResponse struct {
-	Status    string    `json:"status"`
-	Timestamp time.Time `json:"timestamp"`
-	Version   string    `json:"version"`
-	Uptime    string    `json:"uptime"`
+type HttpResponse struct {
+	HttpStatusCode int       `json:"http_status_code"`
+	Status         string    `json:"status"`
+	Timestamp      time.Time `json:"timestamp"`
+	Version        string    `json:"version"`
+	Uptime         string    `json:"uptime"`
 }
 
 // Server holds the server configuration and dependencies
@@ -162,11 +164,12 @@ func (rw *responseWriter) WriteHeader(code int) {
 func (s *Server) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	uptime := time.Since(s.startTime)
 
-	response := HealthResponse{
-		Status:    "healthy",
-		Timestamp: time.Now(),
-		Version:   s.version,
-		Uptime:    uptime.String(),
+	response := HttpResponse{
+		HttpStatusCode: http.StatusOK,
+		Status:         "healthy",
+		Timestamp:      time.Now(),
+		Version:        s.version,
+		Uptime:         uptime.String(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -179,6 +182,7 @@ func (s *Server) healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.logger.Debug("Health check requested",
+		zap.Int("status_code", response.HttpStatusCode),
 		zap.String("status", response.Status),
 		zap.String("version", response.Version),
 		zap.String("uptime", response.Uptime),
@@ -215,6 +219,7 @@ func (s *Server) Start(addr string) error {
 
 	// Start server in a goroutine
 	go func() {
+
 		s.logger.Info("Starting HTTP server", zap.String("address", addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			s.logger.Fatal("Server failed to start", zap.Error(err))
@@ -254,6 +259,9 @@ func main() {
 	}
 
 	addr := ":" + port
+
+	fmt.Println("Starting Trader backend with address:", addr)
+	fmt.Println("Trader backend version:", server.version)
 
 	server.logger.Info("Application starting",
 		zap.String("version", server.version),
