@@ -35,7 +35,7 @@ func (m *UserModel) Insert(user *User) error {
 	VALUES (?, ?, ?) 
 	RETURNING id, created_at, updated_at`
 
-	m.logger.Info("Creating new user",
+	m.Logger.Info("Creating new user",
 		zap.Int("user_id", user.UserID),
 		zap.String("username", user.Username),
 		zap.String("email", user.Email))
@@ -46,7 +46,7 @@ func (m *UserModel) Insert(user *User) error {
 	duration := time.Since(start)
 
 	if err != nil {
-		m.logger.Error("Failed to create user",
+		m.Logger.Error("Failed to create user",
 			zap.Int("user_id", user.UserID),
 			zap.String("username", user.Username),
 			zap.String("email", user.Email),
@@ -55,7 +55,7 @@ func (m *UserModel) Insert(user *User) error {
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 
-	m.logger.Info("User created successfully",
+	m.Logger.Info("User created successfully",
 		zap.Int("user_id", user.UserID),
 		zap.String("username", user.Username),
 		zap.Duration("duration", duration))

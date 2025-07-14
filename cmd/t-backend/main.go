@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/chrisp986/trader-backend/api"
 	db "github.com/chrisp986/trader-backend/database"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -24,13 +23,14 @@ type application struct {
 	user   db.UserModelInterface
 }
 
+type config struct {
+	port     string
+	dbPath   string
+	logLevel string
+}
+
 // newLogger creates a new zap logger with structured JSON output
-func newLogger() *zap.Logger {
-	// Get log level from environment variable or default to INFO
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel == "" {
-		logLevel = "info"
-	}
+func newLogger(logLevel string) *zap.Logger {
 
 	var level zapcore.Level
 	if err := level.UnmarshalText([]byte(logLevel)); err != nil {
@@ -74,12 +74,31 @@ func newLogger() *zap.Logger {
 	return logger
 }
 
+func getConfig() config {
+	// Get log level from environment variable or default to INFO
+	logLevel := os.Getenv("LOG_LEVEL")
+	if logLevel == "" {
+		logLevel = "info"
+	}
+
+	// Get port from environment variable or use default
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	cfg := config{port: port, dbPath: "trader_backend.db", logLevel: logLevel}
+	return cfg
+}
+
 func main() {
 
-	logger := newLogger()
+	cfg := getConfig()
+
+	logger := newLogger(cfg.logLevel)
 
 	// Create database manager
-	dbManager := db.NewDatabaseManager("trader_backend.db", logger)
+	dbManager := db.NewDatabaseManager(cfg.dbPath, logger)
+	app := &application{user: &db.UserModel{DB: dbManager.DB, Logger: logger}}
 
 	// Ensure cleanup
 	defer func() {
@@ -105,23 +124,16 @@ func main() {
 
 	logger.Info("Database setup completed successfully!")
 
-	server := api.NewServer(logger)
+	server := NewServer()
 
 	// Ensure logger is properly closed on exit
 	defer logger.Sync()
 
-	app := &application{user: &db.UserModel{DB: dbManager.DB, Logger: logger}}
-	// Get port from environment variable or use default
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	addr := ":" + port
+	addr := ":" + cfg.port
 
 	fmt.Println("Starting Trader backend with address:", addr)
 	logger.Info("Application starting",
-		zap.String("port", port),
+		zap.String("port", cfg.port),
 	)
 
 	if err := server.Start(addr); err != nil {

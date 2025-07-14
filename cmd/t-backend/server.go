@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 // Server holds the server configuration and dependencies
 type Server struct {
 	router    chi.Router
-	logger    *zap.Logger
 	startTime time.Time
 	version   string
 }
@@ -32,16 +31,9 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 // NewServer creates a new server instance
-func NewServer(logger *zap.Logger) *Server {
+func NewServer() *Server {
 
-	server := &Server{
-		router:    chi.NewRouter(),
-		logger:    logger,
-		startTime: time.Now(),
-		version:   getVersion(),
-	}
-
-	server.setupRoutes()
+	s := setupRoutes()
 
 	logger.Info("Trader backend version:", zap.String("version", server.version))
 
